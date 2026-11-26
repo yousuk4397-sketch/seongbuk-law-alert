@@ -174,6 +174,7 @@ async function renderS3() {
       <details open class="more"><summary>조례 조문별 대조 (${(a.comparisons || []).length}건)</summary>
         <div class="table-wrap"><table><thead><tr><th>조례 조문</th><th>위임 사항</th><th>이유</th></tr></thead><tbody>${rows}</tbody></table></div></details>
       <details class="more"><summary>법령이 바꾼 것과 확인할 점</summary>
+        ${r.source === 'live' ? '<p class="muted">아래 내용은 AI가 정리한 것으로, 출처 조문이 연결되어 있지 않습니다. 근거 문서에 없는 내용이 섞일 수 있으니 원문으로 확인하세요.</p>' : ''}
         <p>${esc(a.summary)}</p>
         ${(a.cautions || []).length ? `<ul class="plain">${a.cautions.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}</details>
       <details class="more"><summary>AI가 참고한 조문 (${(r.sources || []).length}건)</summary>${srcLinks(r.sources, '참고한 조문')}</details>
