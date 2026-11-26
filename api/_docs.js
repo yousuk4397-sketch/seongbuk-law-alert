@@ -44,7 +44,7 @@ export function loadChunks() {
 
 export function findChunk({ number, article }) {
   return loadChunks().find(
-    (c) => c.meta['번호'] === number && (c.meta['조문'] || '').startsWith(article),
+    (c) => c.meta['번호'] === number && ((c.meta['조문'] || '') === article || (c.meta['조문'] || '').startsWith(`${article}(`)), // 「제8조」가 「제8조의2」에 걸리지 않게
   ) || null;
 }
 
@@ -68,7 +68,8 @@ function toIso(s) {
   return m ? `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` : '';
 }
 
-export function publicChunk(c, maxChars) {
+// baseDate: 고른 장면의 기준일. 이보다 뒤에 시행된 판이면 「기준일보다 뒤 판」으로 표시한다.
+export function publicChunk(c, maxChars, baseDate = BASE_DATE) {
   if (!c) return null;
   const clean = cleanBody(c.body);
   const body = maxChars && clean.length > maxChars ? clean.slice(0, maxChars) + ' …(이하 생략)' : clean;
@@ -81,9 +82,14 @@ export function publicChunk(c, maxChars) {
     link: c.meta['원문 링크'] || '',
     articleTitle: c.meta['조문'] || '',
     enforced,
-    afterBase: !!iso && iso > BASE_DATE, // 기준일보다 뒤에 시행된 판인가
+    afterBase: !!iso && iso > baseDate, // 기준일보다 뒤에 시행된 판인가
     body,
   };
+}
+
+// 해설·개정이유처럼 조문 번호가 없는 조각은 파일 이름(앞부분)으로 찾는다
+export function findChunkById(prefix) {
+  return loadChunks().find((c) => c.id.startsWith(prefix)) || null;
 }
 
 // 조례 조문 목록(AI가 없는 조문 번호를 지어내지 않도록 알려 준다)

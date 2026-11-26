@@ -1,14 +1,17 @@
 // 신구법 비교: 새로 생긴 조문은 「신설」로 표시하고, 번호만 옮겨진 조문은 바뀐 낱말을 표시한다.
 import { send, getQuery } from './_util.js';
-import { ITEMS, chunkRef } from './_case.js';
+import { chunkRef } from './_case.js';
+import { getScene } from './_scenes.js';
 import { diffSegments, allAdded } from './_diff.js';
 
 export default async function handler(req, res) {
-  const { item } = getQuery(req);
-  const it = ITEMS.find((x) => x.id === item);
+  const { item, scene } = getQuery(req);
+  const s = getScene(scene);
+  const it = s.items.find((x) => x.id === item);
+  const ref = (spec) => chunkRef(spec, 0, s.id);
   if (!it) return send(res, 404, { error: '알 수 없는 항목입니다.' });
 
-  const after = chunkRef(it.after);
+  const after = ref(it.after);
   const out = {
     id: it.id,
     lawName: it.lawName,
@@ -20,7 +23,7 @@ export default async function handler(req, res) {
     dates: {
       promulgated: it.promulgated,
       enforced: it.enforced,
-      note: it.promulgated === it.enforced
+      note: it.dateNote ? it.dateNote : it.promulgated === it.enforced
         ? `공포일과 시행일이 같습니다(${it.enforced}). 이 서비스는 시행일을 기준으로 봅니다.`
         : `원문의 「본조신설 ${it.promulgated}」은 공포일입니다. 법적 효력은 시행일(${it.enforced})부터이고, 이 서비스는 시행일을 기준으로 봅니다.`,
     },
@@ -30,14 +33,14 @@ export default async function handler(req, res) {
 
   if (it.before) {
     // 같은 조문이 있었던 경우: 바뀐 낱말 표시
-    const before = chunkRef(it.before);
+    const before = ref(it.before);
     const d = diffSegments(before.body, after.body);
     out.compare = { before: { ...before, segments: d.before }, after: { ...after, segments: d.after } };
   }
 
   if (it.moved) {
-    const b = chunkRef(it.moved.before);
-    const a = chunkRef(it.moved.after);
+    const b = ref(it.moved.before);
+    const a = ref(it.moved.after);
     if (b && a) {
       const d = diffSegments(b.body, a.body);
       out.moved = {

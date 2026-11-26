@@ -1,8 +1,9 @@
 // 조문 대조·결론·개정 초안: 검색된 조문으로만 답하게 하고, 어느 AI가 답했는지 남긴다.
-import { send, readBody } from './_util.js';
+import { send, readBody, getQuery } from './_util.js';
 import { askAI } from './_ai.js';
-import { ITEMS, ORDINANCE, demoAnalysis } from './_case.js';
-import { findChunk, searchChunks, publicChunk, articleList } from './_docs.js';
+import { ORDINANCE } from './_case.js';
+import { getScene } from './_scenes.js';
+import { findChunk, findChunkById, searchChunks, publicChunk, articleList } from './_docs.js';
 
 const LAW = { number: '법률 제16318호', article: '제14조의5' };
 const RULE = { number: '환경부령 제843호', article: '제16조의3' };
@@ -28,9 +29,15 @@ const SYSTEM = `당신은 성북구 조례 담당 공무원을 돕는 법령 검
  "drafts":[{"title":"1안. ...","reason":"","position":"","amendment":"","table":[{"current":"","proposed":""}],"tradeoff":"","sources":[]}],
  "cautions":["담당자가 확인할 점"]}`;
 
-function context(item) {
+function context(item, scene) {
   const picked = [];
   const add = (c) => { if (c && !picked.some((p) => p.id === c.id)) picked.push(c); };
+  // 장면 2처럼 근거 조각 목록을 따로 정해 둔 장면은 그 목록을 쓴다
+  if (scene.context) {
+    for (const spec of scene.context.specs) add(findChunk(spec));
+    for (const id of scene.context.idPrefixes) add(findChunkById(id));
+    return picked;
+  }
   // 법률과 시행규칙(위임 조문)은 어느 항목을 골라도 함께 본다
   add(findChunk(RULE));
   add(findChunk(LAW));
@@ -44,19 +51,21 @@ const cut = ({ source, link, docType, afterBase }) => ({ source, link, docType, 
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'POST 요청만 받습니다.' });
-  const { item: itemId } = await readBody(req);
-  const item = ITEMS.find((x) => x.id === itemId);
+  const { item: itemId, scene: sceneId } = await readBody(req);
+  const scene = getScene(sceneId || getQuery(req).scene);
+  const ord = scene.ordinance;
+  const item = scene.items.find((x) => x.id === itemId);
   if (!item) return send(res, 404, { error: '알 수 없는 항목입니다.' });
 
-  const chunks = context(item);
-  const allowed = new Map(chunks.map((c) => [c.id, publicChunk(c)]));
+  const chunks = context(item, scene);
+  const allowed = new Map(chunks.map((c) => [c.id, publicChunk(c, 0, scene.id)]));
   const basis = {
     item: `${item.lawName} ${item.article} (${item.change}, 시행 ${item.enforced})`,
-    ordinance: ORDINANCE.label,
-    ordinanceAfterBase: true,
-    ordinanceNote: ORDINANCE.shortNote,
+    ordinance: ord.label,
+    ordinanceAfterBase: !!ord.shortNote,
+    ordinanceNote: ord.shortNote,
   };
-  const user = `[검토할 법령 변경]\n${basis.item}\n\n[연결 조례] ${ORDINANCE.name} (${ORDINANCE.label}, 정비 전 모습)\n\n[조례 조문 목록]\n${articleList(ORDINANCE.number).join(' / ')}\n\n[검색된 조문]\n` +
+  const user = `[검토할 법령 변경]\n${basis.item}\n\n[연결 조례] ${ord.name} (${ord.label}, ${ord.state})\n\n[조례 조문 목록]\n${articleList(ord.number).join(' / ')}\n\n[검색된 조문]\n` +
     chunks.map((c) => `id: ${c.id}\n문서 종류: ${c.meta['문서 종류']}\n출처: ${c.meta['화면용 출처']}\n${c.body.slice(0, 2000)}`).join('\n\n---\n\n');
 
   const check = (d) => {
@@ -68,7 +77,7 @@ export default async function handler(req, res) {
   };
   const r = await askAI(SYSTEM, user, check);
   const mapSources = (ids) => (Array.isArray(ids) ? ids : []).map((id) => allowed.get(id)).filter(Boolean).map(cut);
-  const allSources = chunks.map((c) => cut(publicChunk(c, 0)));
+  const allSources = chunks.map((c) => cut(publicChunk(c, 0, scene.id)));
 
   if (!r.ok) {
     return send(res, 200, {
@@ -76,7 +85,7 @@ export default async function handler(req, res) {
       reason: 'AI 세 곳 모두 응답하지 못했습니다. 시연 값(예시)을 보여 줍니다.',
       attempts: r.attempts,
       basis,
-      result: demoAnalysis(item.id),
+      result: scene.demoAnalysis(item.id),
       sources: allSources,
     });
   }
@@ -84,7 +93,7 @@ export default async function handler(req, res) {
   const d = r.data;
   // 위임 문구는 AI가 고르게 두지 않고 시행규칙 원문에서 그대로 가져온다(AI마다 엉뚱한 조문을 인용한 적이 있다)
   const ruleBody = findChunk(RULE)?.body || '';
-  const quote = (ruleBody.match(/다만,[^\n]*?그렇지 않다\./) || [''])[0];
+  const quote = scene.context ? '' : (ruleBody.match(/다만,[^\n]*?그렇지 않다\./) || [''])[0];
   const conclusion = { ...d.conclusion, sources: mapSources(d.conclusion.sources) };
   // 판정은 정해진 세 가지 참고 의견 중 하나만 내보낸다. AI가 「개정해야 함」처럼 단정하면 「확인 필요」로 바꾼다.
   if (!VERDICTS.includes(String(conclusion.verdict || '').trim())) conclusion.verdict = '확인 필요';
@@ -99,7 +108,8 @@ export default async function handler(req, res) {
       .filter((c) => !/관련 없|해당 없/.test(`${c.status}${c.reason}`.slice(0, 40)))
       .map((c) => ({ ...c, sources: mapSources(c.sources) })),
     drafts: d.drafts.slice(0, 3).map((x) => ({ ...x, sources: mapSources(x.sources) })),
-    cautions: d.cautions || [],
+    // 자료에서 아직 확인되지 않은 것은 AI 답과 별도로 「확인할 점」 맨 앞에 붙인다
+    cautions: [...scene.pending, ...(d.cautions || [])],
   };
   send(res, 200, { source: 'live', provider: r.provider, model: r.model, attempts: r.attempts, basis, result, sources: allSources });
 }
