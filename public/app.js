@@ -203,6 +203,62 @@ function draftHtml(r, d) {
     ${(d.table || []).map((t) => `<tr><td>${esc(t.current).replace(/\n/g, '<br>')}</td><td>${esc(t.proposed).replace(/\n/g, '<br>')}</td></tr>`).join('')}</table>
     <h3>장단점</h3>${p(d.tradeoff)}<p><i>※ AI가 만든 참고용 초안입니다. 문안과 개정 여부는 담당자가 확인해 결정합니다.</i></p>`;
 }
+/* ---------- 신구조문대비표 복사 (한글 문서에 붙여 넣기용) ---------- */
+// 「(생 략)」「(현행과 같음)」「(신설)」「<신 설>」은 관례상 밑줄을 긋지 않는 표시어라 한 덩어리로 다룬다
+const KEEP = /^(?:\((?:생\s*략|현행과\s*같음|신\s*설)\)|<\s*신\s*설\s*>)$/;
+const tokens = (s) => String(s || '').match(/\((?:생\s*략|현행과\s*같음|신\s*설)\)|<\s*신\s*설\s*>|\S+|\s+/g) || [];
+// 두 칸의 낱말을 비교해 바뀐 낱말에 표시한다(서버 api/_diff.js 와 같은 방식)
+function markChanges(cur, pro) {
+  const a = tokens(cur), b = tokens(pro);
+  const ma = a.map(() => true), mb = b.map(() => true);
+  if (a.length * b.length <= 1_000_000) {
+    const n = a.length, m = b.length, w = m + 1, dp = new Uint16Array((n + 1) * w);
+    for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) dp[i * w + j] = a[i] === b[j] ? dp[(i + 1) * w + j + 1] + 1 : Math.max(dp[(i + 1) * w + j], dp[i * w + j + 1]);
+    let i = 0, j = 0;
+    while (i < n && j < m) {
+      if (a[i] === b[j]) { ma[i] = mb[j] = false; i++; j++; } else if (dp[(i + 1) * w + j] >= dp[i * w + j + 1]) i++; else j++;
+    }
+  }
+  const html = (toks, marks) => toks.map((t, k) => {
+    const e = esc(t).replace(/\n/g, '<br>');
+    return marks[k] && /\S/.test(t) && !KEEP.test(t) ? `<u>${e}</u>` : e;
+  }).join('').replace(/<\/u>(\s+)<u>/g, '$1'); // 붙은 밑줄은 이어서 긋는다
+  return { cur: html(a, ma), pro: html(b, mb) };
+}
+function compareTable(d) {
+  const cell = 'border:1px solid #000;padding:6px 8px;vertical-align:top;width:50%';
+  const head = `<tr><th style="${cell};text-align:center;background:#F2F2F2">현행</th><th style="${cell};text-align:center;background:#F2F2F2">개정안</th></tr>`;
+  const rows = (d.table || []).map((t) => { const x = markChanges(t.current, t.proposed); return `<tr><td style="${cell}">${x.cur}</td><td style="${cell}">${x.pro}</td></tr>`; }).join('');
+  const html = `<table style="border-collapse:collapse;width:100%;font-family:'Malgun Gothic',sans-serif;font-size:11pt">${head}${rows}</table>`;
+  // 일반 글자 표: 칸 사이는 탭, 칸 안 줄바꿈이 있으면 큰따옴표로 묶는다(엑셀·한글 표 붙여 넣기 관례)
+  const q = (v) => { const t = String(v ?? ''); return /[\t\n"]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+  const text = ['현행\t개정안', ...(d.table || []).map((t) => `${q(t.current)}\t${q(t.proposed)}`)].join('\r\n');
+  return { html, text };
+}
+async function copyRich(html, text) {
+  try {
+    if (!window.ClipboardItem || !navigator.clipboard?.write) throw new Error('지원 안 함');
+    await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([text], { type: 'text/plain' }) })]);
+    return true;
+  } catch {
+    // 클립보드 권한이 없을 때: 복사 순간에 두 형식을 직접 넣는다
+    let ok = false;
+    const on = (e) => { e.clipboardData.setData('text/html', html); e.clipboardData.setData('text/plain', text); e.preventDefault(); ok = true; };
+    document.addEventListener('copy', on);
+    try { document.execCommand('copy'); } catch { ok = false; }
+    document.removeEventListener('copy', on);
+    return ok;
+  }
+}
+function toast(msg, kind = 'ok') {
+  let el = document.getElementById('toast');
+  if (!el) { el = document.createElement('div'); el.id = 'toast'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite'); document.body.appendChild(el); }
+  el.className = `toast ${kind} show`;
+  el.textContent = msg;
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => { el.className = `toast ${kind}`; }, 3000);
+}
+
 function download(name, html) {
   const doc = `<html><head><meta charset="utf-8"><title>${esc(name)}</title></head><body style="font-family:'Malgun Gothic',sans-serif">${html}</body></html>`;
   const a = document.createElement('a');
@@ -235,7 +291,7 @@ async function renderS4() {
       <div class="table-wrap"><table><thead><tr><th>현행</th><th>개정안</th></tr></thead><tbody>${(d.table || []).map((t) => `<tr><td class="pre">${esc(t.current)}</td><td class="pre">${esc(t.proposed)}</td></tr>`).join('')}</tbody></table></div>
       <h4>장단점</h4><p>${esc(d.tradeoff)}</p>
       ${srcLinks(d.sources)}
-      <div class="actions"><button class="btn small" data-act="copy" data-n="${n}">문안 복사</button> <button class="btn small primary" data-act="word" data-n="${n}">Word로 내려받기</button></div>
+      <div class="actions"><button class="btn small" data-act="table-copy" data-n="${n}">신구조문대비표 복사</button> <button class="btn small" data-act="copy" data-n="${n}">문안 복사</button> <button class="btn small primary" data-act="word" data-n="${n}">Word로 내려받기</button></div>
     </div>`).join('')}
     <div class="notice warn"><strong>초안은 참고용입니다.</strong>문안과 개정 여부는 담당자가 법령·조례 원문과 법제 심사 기준으로 확인해 결정합니다.</div>
     <div class="actions"><button class="btn" data-act="word-all">${drafts.length}안 모두 Word로 내려받기</button> ${linkBtn('#s5', '현황판으로 이동')}</div>`;
@@ -336,6 +392,13 @@ document.addEventListener('click', async (e) => {
   if (act === 'live') runLive(b.closest('[data-live]'), b.dataset.kind);
   if (act === 'csv') exportCsv();
   if (act === 'export') exportBoard();
+  if (act === 'table-copy') {
+    const r = state.analysis[state.selected]; const d = r?.result?.drafts?.[Number(b.dataset.n)];
+    if (!d || !(d.table || []).length) { toast('이 안에는 신구조문대비표가 없습니다.', 'danger'); return; }
+    const { html, text } = compareTable(d);
+    const ok = await copyRich(html, text);
+    toast(ok ? '복사했습니다. 한글 문서에 붙여 넣으세요' : '복사하지 못했습니다. 브라우저의 클립보드 권한을 확인하세요.', ok ? 'ok' : 'danger');
+  }
   if (act === 'copy' || act === 'word' || act === 'word-all') {
     const r = state.analysis[state.selected]; const ds = r.result.drafts;
     if (act === 'copy') {
