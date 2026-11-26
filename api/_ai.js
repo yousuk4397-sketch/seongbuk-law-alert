@@ -43,12 +43,24 @@ const ANSWER_SCHEMA = {
   required: ['conclusion', 'summary', 'comparisons', 'drafts', 'cautions'],
 };
 
+// 도구 답에서 목록·묶음이 글자(JSON 문자열)로 오는 경우가 있다 → 다시 목록·묶음으로 읽는다
+function unwrapStrings(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  const out = Array.isArray(obj) ? [] : {};
+  for (const [k, v] of Object.entries(obj)) {
+    let val = v;
+    if (typeof v === 'string' && /^\s*[[{]/.test(v)) { try { val = JSON.parse(v); } catch { /* 그냥 글자로 둔다 */ } }
+    out[k] = typeof val === 'object' ? unwrapStrings(val) : val;
+  }
+  return out;
+}
+
 async function callClaude(key, model, system, user, timeoutMs) {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({
-      model, max_tokens: 6000,
+      model, max_tokens: 8000,
       system: `${system}\n결과는 반드시 report 도구로 보고합니다.`,
       tools: [{ name: 'report', description: '검토 결과를 보고한다', input_schema: ANSWER_SCHEMA }],
       tool_choice: { type: 'auto' }, // 이 모델은 도구 강제 지정(type: tool)을 지원하지 않는다
@@ -58,8 +70,10 @@ async function callClaude(key, model, system, user, timeoutMs) {
   });
   const j = await r.json();
   if (!r.ok) throw new Error(`HTTP ${r.status} ${j?.error?.message || ''}`);
+  // 답이 길어 중간에 잘리면 초안이 빠진다 → 이유를 남겨 다음 AI로 넘긴다
+  if (j.stop_reason === 'max_tokens') throw new Error('답이 길어 잘림');
   const tool = (j.content || []).find((p) => p.type === 'tool_use');
-  if (tool) return JSON.stringify(tool.input);
+  if (tool) return JSON.stringify(unwrapStrings(tool.input));
   return (j.content || []).map((p) => p.text || '').join(''); // 도구를 안 썼으면 글에서 JSON을 찾는다
 }
 

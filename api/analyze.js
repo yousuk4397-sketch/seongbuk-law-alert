@@ -6,6 +6,7 @@ import { findChunk, searchChunks, publicChunk, articleList } from './_docs.js';
 
 const LAW = { number: '법률 제16318호', article: '제14조의5' };
 const RULE = { number: '환경부령 제843호', article: '제16조의3' };
+const VERDICTS = ['개정 검토 필요', '개정 불필요 가능성', '확인 필요'];
 
 const SYSTEM = `당신은 성북구 조례 담당 공무원을 돕는 법령 검토 보조 AI입니다. 읽는 사람은 공무원이므로 쉬운 말로 짧게 씁니다.
 규칙:
@@ -85,6 +86,8 @@ export default async function handler(req, res) {
   const ruleBody = findChunk(RULE)?.body || '';
   const quote = (ruleBody.match(/다만,[^\n]*?그렇지 않다\./) || [''])[0];
   const conclusion = { ...d.conclusion, sources: mapSources(d.conclusion.sources) };
+  // 판정은 정해진 세 가지 참고 의견 중 하나만 내보낸다. AI가 「개정해야 함」처럼 단정하면 「확인 필요」로 바꾼다.
+  if (!VERDICTS.includes(String(conclusion.verdict || '').trim())) conclusion.verdict = '확인 필요';
   if (quote) {
     conclusion.delegation = quote.replace(/^다만,\s*/, '');
     conclusion.delegationArticle = '폐기물관리법 시행규칙 제16조의3 제2항 제3호 단서';
