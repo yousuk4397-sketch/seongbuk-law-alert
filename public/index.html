@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>성북 법령개정 알리미</title>
+  <meta name="description" content="법령이 바뀌면 연결된 성북구 조례와 고칠 조문, 개정 초안을 조례 담당 공무원에게 알려 주는 AI 알리미">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+
+  <header class="masthead">
+    <div class="container masthead-row">
+      <div class="brand">성북 법령개정 알리미</div>
+      <div class="base-date" id="base-date" aria-live="polite">시연 기준일 불러오는 중</div>
+    </div>
+    <nav class="container steps" aria-label="진행 단계">
+      <ol id="step-nav">
+        <li><a href="#s1" data-step="1">검토 필요 목록</a></li>
+        <li><a href="#s2" data-step="2">신구법 비교</a></li>
+        <li><a href="#s3" data-step="3">조문 대조와 사유</a></li>
+        <li><a href="#s4" data-step="4">개정 초안</a></li>
+        <li><a href="#s5" data-step="5">현황판</a></li>
+      </ol>
+    </nav>
+  </header>
+
+  <main id="main" class="container" tabindex="-1">
+    <div id="view" aria-live="polite"></div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>AI 판단은 참고용입니다. 개정 필요 여부와 초안은 담당자가 법령과 조례 원문으로 확인해 최종 결정합니다.</p>
+      <p>이 화면은 수업 시연용입니다. 실제 도입 때는 상용 AI 서비스 대신 기관 내부에 두는 방식(공개된 오픈 LLM 활용)으로 설계할 것을 권고합니다.</p>
+      <p class="muted">화면 디자인은 공공 디지털 서비스 디자인 시스템(KRDS)의 시각 언어를 참고했습니다.</p>
+    </div>
+  </footer>
+
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

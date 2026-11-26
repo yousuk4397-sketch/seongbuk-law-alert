@@ -1,0 +1,9 @@
+{
+  "outputDirectory": "public",
+  "functions": {
+    "api/*.js": {
+      "maxDuration": 60,
+      "includeFiles": "{docs/답변참고문서/**,docs/서비스데이터/**}"
+    }
+  }
+}

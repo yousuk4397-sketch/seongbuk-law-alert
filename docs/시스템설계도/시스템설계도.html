@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>성북 법령개정 알리미 시스템 설계도</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    @page { size: 1280px 720px; margin: 0; }
+    html, body { width: 1280px; height: 720px; background: #ffffff; }
+    body { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; }
+    svg { display: block; width: 1280px; height: 720px; }
+  </style>
+</head>
+<body>
+  <svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="system-overview-title system-overview-desc">
+    <title id="system-overview-title">성북 법령개정 알리미 시스템 설계도</title>
+    <desc id="system-overview-desc">조례 담당 공무원이 웹 화면과 서버를 거쳐 법제처, 입법예고, 근거 문서, AI에서 자료를 가져와 검토 결과를 받는 흐름을 위에서 아래로 보여 주는 설계도</desc>
+    <defs>
+      <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#464C53"/></marker>
+      <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#256EF4"/></marker>
+    </defs>
+
+    <rect width="100%" height="100%" fill="#ffffff"/>
+
+    <!-- 제목 -->
+    <text x="40" y="60" fill="#131416" font-size="32" font-weight="700" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">성북 법령개정 알리미는 이렇게 동작합니다</text>
+    <text x="40" y="92" fill="#464C53" font-size="16" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">법령이 바뀌면 연결된 조례와 고칠 조문, 개정 초안을 찾아 보여 줍니다. AI 판단은 참고용이며 최종 결정은 사람이 합니다.</text>
+
+    <!-- 화살표 (상자보다 먼저) -->
+    <!-- 공무원 → 화면 -->
+    <line x1="640" y1="184" x2="640" y2="224" stroke="#464C53" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <rect x="652" y="196" width="40" height="16" rx="2" fill="#ffffff"/>
+    <text x="672" y="209" fill="#6D7882" font-size="12" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">접속</text>
+    <!-- 화면 → 서버 -->
+    <line x1="640" y1="296" x2="640" y2="336" stroke="#464C53" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <rect x="652" y="308" width="40" height="16" rx="2" fill="#ffffff"/>
+    <text x="672" y="321" fill="#6D7882" font-size="12" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">요청</text>
+
+    <!-- 서버 → 자료 4곳 (서버 아래 가장자리의 서로 다른 지점에서 출발) -->
+    <path d="M472,408 V420 Q472,428 464,428 H204 Q196,428 196,436 V448" fill="none" stroke="#464C53" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <path d="M584,408 V420 Q584,428 576,428 H492 Q484,428 484,436 V448" fill="none" stroke="#464C53" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+    <path d="M696,408 V420 Q696,428 704,428 H764 Q772,428 772,436 V448" fill="none" stroke="#464C53" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <path d="M808,408 V420 Q808,428 816,428 H1052 Q1060,428 1060,436 V448" fill="none" stroke="#256EF4" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+
+    <!-- 자료 4곳 → 결과 -->
+    <path d="M196,544 V556 Q196,564 204,564 H464 Q472,564 472,572 V584" fill="none" stroke="#464C53" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <path d="M484,544 V556 Q484,564 492,564 H576 Q584,564 584,572 V584" fill="none" stroke="#464C53" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+    <path d="M772,544 V556 Q772,564 764,564 H704 Q696,564 696,572 V584" fill="none" stroke="#464C53" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <path d="M1060,544 V556 Q1060,564 1052,564 H816 Q808,564 808,572 V584" fill="none" stroke="#256EF4" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+
+    <!-- 1층: 사람 -->
+    <rect x="480" y="120" width="320" height="64" rx="6" fill="#ffffff"/>
+    <rect x="480" y="120" width="320" height="64" rx="6" fill="rgba(70,76,83,0.10)" stroke="#6D7882" stroke-width="1"/>
+    <text x="640" y="148" fill="#131416" font-size="16" font-weight="600" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">조례 담당 공무원</text>
+    <text x="640" y="168" fill="#464C53" font-size="12" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">법령이 바뀌었는지 확인하고 최종 결정합니다</text>
+
+    <!-- 2층: 웹 화면 -->
+    <rect x="360" y="224" width="560" height="72" rx="6" fill="#ffffff"/>
+    <rect x="360" y="224" width="560" height="72" rx="6" fill="#ffffff" stroke="#131416" stroke-width="1"/>
+    <text x="640" y="252" fill="#131416" font-size="16" font-weight="600" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">알리미 웹 화면</text>
+    <text x="640" y="276" fill="#464C53" font-size="12" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">목록 → 신구법 비교 → 조문 대조 → 개정 초안 → 현황판</text>
+
+    <!-- 3층: 서버 -->
+    <rect x="360" y="336" width="560" height="72" rx="6" fill="#ffffff"/>
+    <rect x="360" y="336" width="560" height="72" rx="6" fill="#ffffff" stroke="#131416" stroke-width="1"/>
+    <text x="640" y="364" fill="#131416" font-size="16" font-weight="600" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">알리미 서버</text>
+    <text x="640" y="388" fill="#464C53" font-size="12" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">화면 대신 외부 자료를 가져오고 열쇠(키)를 안전하게 보관합니다</text>
+
+    <!-- 4층: 자료 4곳 -->
+    <!-- 법제처 -->
+    <rect x="76" y="448" width="240" height="96" rx="6" fill="#ffffff"/>
+    <rect x="76" y="448" width="240" height="96" rx="6" fill="rgba(19,20,22,0.03)" stroke="rgba(19,20,22,0.30)" stroke-width="1"/>
+    <text x="196" y="476" fill="#131416" font-size="16" font-weight="600" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">법제처 법령 정보</text>
+    <text x="196" y="500" fill="#464C53" font-size="12" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">최신 법령·조례를 조회합니다</text>
+    <text x="196" y="520" fill="#464C53" font-size="12" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">안 되면 시연 값으로 대체</text>
+    <!-- 입법예고 (연결 안 됨) -->
+    <rect x="364" y="448" width="240" height="96" rx="6" fill="#ffffff"/>
+    <rect x="364" y="448" width="240" height="96" rx="6" fill="rgba(19,20,22,0.02)" stroke="rgba(19,20,22,0.40)" stroke-width="1" stroke-dasharray="4,3"/>
+    <text x="484" y="476" fill="#131416" font-size="16" font-weight="600" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">국민참여입법센터</text>
+    <text x="484" y="500" fill="#464C53" font-size="12" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">입법예고(개정 전 단계) 열람</text>
+    <text x="484" y="520" fill="#464C53" font-size="12" font-weight="600" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">아직 연결 안 됨 (승인 대기)</text>
+    <!-- 근거 문서 -->
+    <rect x="652" y="448" width="240" height="96" rx="6" fill="#ffffff"/>
+    <rect x="652" y="448" width="240" height="96" rx="6" fill="rgba(19,20,22,0.05)" stroke="#464C53" stroke-width="1"/>
+    <text x="772" y="476" fill="#131416" font-size="16" font-weight="600" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">근거 문서 모음</text>
+    <text x="772" y="500" fill="#464C53" font-size="12" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">폐기물 사례 법령·조례 조각 517개</text>
+    <text x="772" y="520" fill="#464C53" font-size="12" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">AI에게 근거로 전달합니다</text>
+    <!-- AI (강조) -->
+    <rect x="940" y="448" width="240" height="96" rx="6" fill="#ffffff"/>
+    <rect x="940" y="448" width="240" height="96" rx="6" fill="#ECF2FE" stroke="#256EF4" stroke-width="1"/>
+    <text x="1060" y="476" fill="#131416" font-size="16" font-weight="600" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">AI 3곳</text>
+    <text x="1060" y="500" fill="#0B50D0" font-size="12" font-weight="600" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">Claude → Groq → Gemini</text>
+    <text x="1060" y="520" fill="#464C53" font-size="12" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">앞이 안 되면 다음 AI로 넘깁니다</text>
+
+    <!-- 5층: 결과 (강조) -->
+    <rect x="360" y="584" width="560" height="64" rx="6" fill="#ffffff"/>
+    <rect x="360" y="584" width="560" height="64" rx="6" fill="#ECF2FE" stroke="#256EF4" stroke-width="1"/>
+    <text x="640" y="612" fill="#131416" font-size="16" font-weight="600" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">검토 결과 화면</text>
+    <text x="640" y="632" fill="#464C53" font-size="12" text-anchor="middle" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">검토 필요 목록 · 조문 대조 · 개정 초안 2~3안 (참고용)</text>
+
+    <!-- 범례 (아래 가로 띠) -->
+    <line x1="40" y1="664" x2="1240" y2="664" stroke="rgba(19,20,22,0.10)" stroke-width="0.8"/>
+    <rect x="40" y="680" width="20" height="12" rx="2" fill="rgba(70,76,83,0.10)" stroke="#6D7882" stroke-width="1"/>
+    <text x="68" y="691" fill="#464C53" font-size="12" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">사람</text>
+    <rect x="160" y="680" width="20" height="12" rx="2" fill="#ffffff" stroke="#131416" stroke-width="1"/>
+    <text x="188" y="691" fill="#464C53" font-size="12" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">우리가 만든 부분</text>
+    <rect x="340" y="680" width="20" height="12" rx="2" fill="rgba(19,20,22,0.03)" stroke="rgba(19,20,22,0.30)" stroke-width="1"/>
+    <text x="368" y="691" fill="#464C53" font-size="12" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">외부 서비스</text>
+    <rect x="480" y="680" width="20" height="12" rx="2" fill="rgba(19,20,22,0.05)" stroke="#464C53" stroke-width="1"/>
+    <text x="508" y="691" fill="#464C53" font-size="12" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">자료 보관</text>
+    <rect x="620" y="680" width="20" height="12" rx="2" fill="#ECF2FE" stroke="#256EF4" stroke-width="1"/>
+    <text x="648" y="691" fill="#464C53" font-size="12" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">핵심 (AI와 결과)</text>
+    <rect x="780" y="680" width="20" height="12" rx="2" fill="#ffffff" stroke="rgba(19,20,22,0.40)" stroke-width="1" stroke-dasharray="4,3"/>
+    <text x="808" y="691" fill="#464C53" font-size="12" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">아직 연결 안 됨</text>
+    <text x="1240" y="691" fill="#6D7882" font-size="12" text-anchor="end" font-family="'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">흐름은 위에서 아래로 진행</text>
+  </svg>
+</body>
+</html>
