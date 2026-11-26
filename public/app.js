@@ -5,7 +5,8 @@ const STORE = 'seongbuk-board-v2';
 const STATUSES = ['확인 전', '검토 중', '부서 협의 중', '개정안 작성 중', '검토 완료'];
 const FIELD_LABEL = { status: '진행 상태', owner: '담당자', due: '기한', dept: '협의 부서', memo: '메모' };
 
-const state = { data: null, selected: null, analysis: {}, compare: {}, filter: { q: '', status: '전체', sort: 'due' } };
+const DEFAULT_SCENE = '2019-12-31'; // 기본 시연 기준일: 과거 사례
+const state = { scene: DEFAULT_SCENE, data: null, selected: null, analysis: {}, compare: {}, filter: { q: '', status: '전체', sort: 'due' } };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const api = async (path, opts) => {
@@ -23,10 +24,18 @@ const saveBoard = (b) => localStorage.setItem(STORE, JSON.stringify(b));
 const entry = (board, id) => ({ ...blank(), ...(board[id] || {}) });
 
 const srcLinks = (list, title = '참고한 조문') => (list || []).length
-  ? `<p class="source">${title}:<br>${list.map((s) => `${s.docType === '해설' ? '<span class="badge demo">해설(비공식)</span> ' : ''}${esc(s.source)}${s.afterBase ? ' <span class="badge warn">기준일보다 뒤 판</span>' : ''}${s.link ? ` · <a href="${esc(s.link)}" target="_blank" rel="noopener">원문 보기</a>` : ''}`).join('<br>')}</p>`
+  ? `<p class="source">${title}:<br>${list.map((s) => `${String(s.docType).startsWith('해설') ? '<span class="badge demo">해설(비공식)</span> ' : ''}${esc(s.source)}${s.afterBase ? ' <span class="badge warn">기준일보다 뒤 판</span>' : ''}${/^https?:\/\//.test(s.link || '') ? ` · <a href="${esc(s.link)}" target="_blank" rel="noopener">원문 보기</a>` : /확인 필요/.test(s.link || '') ? ' · <span class="badge demo">원문 링크 확인 필요</span>' : ''}`).join('<br>')}</p>`
   : '';
 
 const item = () => state.data.items.find((i) => i.id === state.selected);
+
+/* ---------- 장면별 배지·「확인 필요」 안내 ---------- */
+const badgesHtml = (i) => (i.badges || ['검토 필요']).map((b) => `<span class="badge ${b === '확인 필요' ? 'demo' : 'warn'}">${esc(b)}</span>`).join(' ');
+const pendingNotice = (onlyItem) => {
+  const list = state.data.pending || [];
+  if (!list.length || (onlyItem && !onlyItem.pending)) return '';
+  return `<div class="notice warn"><strong>확인 필요</strong>${list.map((x) => esc(x)).join('<br>')}</div>`;
+};
 
 /* ---------- 검토 대상·대조 조례 안내 줄 (2~4단계 맨 위) ---------- */
 function contextBar() {
@@ -34,30 +43,31 @@ function contextBar() {
   return `<div class="ctx">
     <div class="ctx-row"><label for="ctx-item">검토 대상</label>
       <select id="ctx-item" data-act-change="pick">${d.items.map((x) => `<option value="${esc(x.id)}"${x.id === i.id ? ' selected' : ''}>${esc(x.lawName)} ${esc(x.article)} (${esc(x.change)})</option>`).join('')}</select></div>
-    <div class="ctx-row"><span class="ctx-k">대조 조례</span><span>${esc(d.ordinance.label)} <span class="badge warn">${esc(d.ordinance.shortNote)}</span></span></div>
+    <div class="ctx-row"><span class="ctx-k">대조 조례</span><span>${esc(d.ordinance.label)}${d.ordinance.shortNote ? ` <span class="badge warn">${esc(d.ordinance.shortNote)}</span>` : ''}</span></div>
   </div>`;
 }
 
 /* ---------- 법제처 최신 확인 상자 ---------- */
 const LIVE = {
-  history: { title: '법제처 변경이력에서 찾기', btn: '2019. 12. 31. 변경 법령 조회', desc: '법제처에 등록된 2019. 12. 31. 변경분 중에서 폐기물관리법과 시행규칙을 찾습니다.' },
+  history: { title: '법제처 변경이력에서 찾기', btn: () => `${state.data.baseDateLabel} 변경 법령 조회`, desc: () => `법제처에 등록된 ${state.data.baseDateLabel} 변경분 중에서 폐기물관리법과 하위 법령을 찾습니다.` },
   compare: { title: '법제처 신구법 비교 목록', btn: '신구법 비교 목록 조회', desc: '법제처가 제공하는 폐기물관리법 시행규칙의 신구법 비교 목록을 가져옵니다. 오늘 기준 정보입니다.' },
   notice: { title: '개정 전 단계(입법예고) 열람', btn: '입법예고 조회', desc: '국민참여입법센터의 입법예고 목록을 가져옵니다. 현재 승인 대기라 조회되지 않을 수 있습니다.' },
   ordin: { title: '조례의 최신 시행일', btn: '조례 시행일 조회', desc: '법제처에서 성북구 폐기물 관리 조례의 최신 시행일을 가져옵니다. 오늘 기준 정보입니다.' },
 };
 function liveBox(kind) {
   const l = LIVE[kind];
+  const txt = (v) => (typeof v === 'function' ? v() : v);
   return `<div class="live-box" data-live="${kind}">
     <div class="row"><strong>${esc(l.title)}</strong>
-      <button class="btn small" data-act="live" data-kind="${kind}">${esc(l.btn)}</button></div>
-    <div class="live-out muted">${esc(l.desc)} 조회하지 못하면 이유와 시연 값을 함께 보여 줍니다.</div>
+      <button class="btn small" data-act="live" data-kind="${kind}">${esc(txt(l.btn))}</button></div>
+    <div class="live-out muted">${esc(txt(l.desc))} 조회하지 못하면 이유와 시연 값을 함께 보여 줍니다.</div>
   </div>`;
 }
 async function runLive(box, kind) {
   const out = box.querySelector('.live-out');
   out.innerHTML = `<p class="kv muted">법제처에 조회하는 중입니다. 응답이 느리면 최대 20초 걸릴 수 있습니다.</p>${skeleton(3)}`;
   try {
-    const r = await api(`/api/live?kind=${kind}`, { signal: AbortSignal.timeout(30000) });
+    const r = await api(`/api/live?kind=${kind}&scene=${encodeURIComponent(state.scene)}`, { signal: AbortSignal.timeout(30000) });
     const badge = r.source === 'live' ? '<span class="badge live">실시간</span>' : '<span class="badge demo">시연 값</span>';
     const reason = r.reason ? `<p class="kv"><b>실시간으로 가져오지 못한 이유:</b> ${esc(r.reason)}</p>` : '';
     const note = r.note ? `<p class="kv muted">${esc(r.note)}</p>` : '';
@@ -78,7 +88,7 @@ function renderS1() {
     <div class="card item-card">
       <div class="item-head">
         <div><h3>${esc(i.lawName)} ${esc(i.article)}</h3><p class="muted">${esc(i.title)} · ${esc(i.change)}</p></div>
-        <div class="badges"><span class="badge warn">검토 필요</span> <span class="badge warn">조례 미정비</span></div>
+        <div class="badges">${badgesHtml(i)}</div>
       </div>
       <p>${esc(i.summary)}</p>
       <p class="kv"><b>공포</b> ${esc(i.promulgated)} · <b>시행</b> ${esc(i.enforced)}</p>
@@ -88,7 +98,8 @@ function renderS1() {
   view.innerHTML = `
     <h2>검토 필요 목록</h2>
     <p class="lede">법령 변경이력에서 개정된 법령과, 그와 연결된 성북구 조례를 모았습니다. 항목을 고르면 바뀌기 전과 후의 법령을 비교합니다.</p>
-    <div class="notice"><strong>시연 기준일: ${esc(d.baseDateLabel)}</strong>이 날짜로 돌아간 상태입니다. 법령은 개정되었지만 성북구 조례는 아직 고쳐지지 않았습니다. 고쳐야 할 조문과 개정 초안을 이 서비스로 찾아봅니다.</div>
+    <div class="notice"><strong>시연 기준일: ${esc(d.baseDateLabel)} (${esc(d.name)})</strong>${esc(d.intro)}</div>
+    ${pendingNotice()}
     ${cards}
     ${liveBox('history')}`;
 }
@@ -99,7 +110,7 @@ async function renderS2() {
   const i = item();
   view.innerHTML = `<h2>신구법 비교</h2>${contextBar()}${skeleton(6)}`;
   try {
-    const c = state.compare[i.id] || (state.compare[i.id] = await api(`/api/compare?item=${encodeURIComponent(i.id)}`));
+    const c = state.compare[i.id] || (state.compare[i.id] = await api(`/api/compare?item=${encodeURIComponent(i.id)}&scene=${encodeURIComponent(state.scene)}`));
     const segs = (x) => x.segments.map((s) => s.t === 'same' ? esc(s.s) : `<mark class="${s.t}">${esc(s.s)}</mark>`).join('');
     const box = (t, x, badge) => `<div class="card"><h3>${t} ${badge || ''}</h3><div class="law-text">${segs(x)}</div>${srcLinks([x], '출처')}</div>`;
     const legend = '<p class="muted"><mark class="add">초록 밑줄</mark>은 새로 생긴 내용, <mark class="del">빨간 취소선</mark>은 없어진 내용입니다.</p>';
@@ -108,7 +119,7 @@ async function renderS2() {
     let body;
     if (c.isNew) {
       body = `<div class="notice warn"><strong>새로 생긴 조문입니다 (신설)</strong>${esc(i.lawName)} ${esc(i.article)}은 개정 전 판에 없던 조문입니다. 비교할 이전 내용이 없어 전체가 새 내용입니다.</div>
-        ${box('바뀐 후 (전체가 새 내용)', c.newArticle, '<span class="badge warn">신설</span>')}${legend}${dates}`;
+        ${box('바뀐 후 (전체가 새 내용)', c.newArticle, '<span class="badge warn">신설</span>')}${pendingNotice(i)}${legend}${dates}`;
       if (c.moved) {
         body += `<h3 style="margin-top:32px">번호가 옮겨진 조문: ${esc(c.moved.fromArticle)} → ${esc(c.moved.toArticle)}</h3>
           <div class="notice"><strong>종전 ${esc(c.moved.fromArticle)} 조문이 ${esc(c.moved.toArticle)}로 옮겨졌습니다</strong>안전기준 조문이 ${esc(i.article)}에 들어오면서 뒤 조문 번호가 밀렸습니다. 아래는 옮겨진 조문의 바뀐 곳입니다.</div>
@@ -131,7 +142,7 @@ async function renderS2() {
 /* ---------- AI 분석 (3·4단계가 함께 사용) ---------- */
 async function analyze(id) {
   if (state.analysis[id]) return state.analysis[id];
-  const r = await api('/api/analyze', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ item: id }) });
+  const r = await api('/api/analyze', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ item: id, scene: state.scene }) });
   state.analysis[id] = r;
   return r;
 }
@@ -140,7 +151,8 @@ const aiBadge = (r) => r.source === 'live'
   : '<span class="badge demo">시연 값</span>';
 const attemptsList = (r) => (r.attempts || []).filter((a) => !a.ok).length
   ? `<p class="kv"><b>넘어간 AI:</b> ${r.attempts.filter((a) => !a.ok).map((a) => `${esc(a.provider)}(${esc(a.reason)})`).join(', ')}</p>` : '';
-const baseWarn = () => `<div class="notice warn"><strong>기준일 확인 필요</strong>${esc(state.data.ordinance.note)}</div>`;
+const baseWarn = () => (state.data.ordinance.note ? `<div class="notice warn"><strong>기준일 확인 필요</strong>${esc(state.data.ordinance.note)}</div>` : '');
+const noteBadge = (r) => (r.basis.ordinanceNote ? ` <span class="badge warn">${esc(r.basis.ordinanceNote)}</span>` : '');
 const statusClass = (s) => (s === '없음' ? 'warn' : s === '일부 있음' ? 'info' : s === '있음' ? 'ok' : 'demo');
 
 async function renderS3() {
@@ -148,7 +160,7 @@ async function renderS3() {
   const i = item();
   const head = `<h2>조문 대조와 사유</h2>${contextBar()}`;
   if (!state.analysis[i.id]) {
-    view.innerHTML = `${head}${baseWarn()}<p class="lede">법률 → 시행규칙 → 조례로 이어지는 위임 관계를 보고, 조례의 어느 조문을 고쳐야 하는지 찾습니다.</p>
+    view.innerHTML = `${head}${baseWarn()}<p class="lede">${esc(state.data.s3Lede)}</p>${pendingNotice()}
       <button class="btn primary" data-act="analyze">AI로 조문 대조하기</button>
       <p class="muted" style="margin-top:12px">검색된 조문으로만 답하며, 개정이 필요한지는 단정하지 않습니다. 20~40초 걸릴 수 있습니다.</p>
       ${liveBox('ordin')}`;
@@ -167,7 +179,7 @@ async function renderS3() {
         <p class="headline">${esc(c.headline)}</p>
         <p><strong>고칠 곳</strong> ${esc(c.target)}</p>
         ${delegation}
-        <p class="kv"><b>대조 기준</b> ${esc(r.basis.item)} ↔ ${esc(r.basis.ordinance)} <span class="badge warn">${esc(r.basis.ordinanceNote)}</span></p>
+        <p class="kv"><b>대조 기준</b> ${esc(r.basis.item)} ↔ ${esc(r.basis.ordinance)}${noteBadge(r)}</p>
         <div class="actions">${linkBtn('#s4', '개정 초안 보기')}</div>
       </div>
       ${baseWarn()}
@@ -188,7 +200,7 @@ function draftText(r, d) {
   const lines = [
     `[조례 개정 초안 ${d.title}]`,
     `검토 대상: ${r.basis.item}`,
-    `대조 조례: ${r.basis.ordinance} (${r.basis.ordinanceNote})`,
+    `대조 조례: ${r.basis.ordinance}${r.basis.ordinanceNote ? ` (${r.basis.ordinanceNote})` : ''}`,
     '', '■ 개정이유', d.reason, '', '■ 개정 위치', d.position, '', '■ 개정 문안', d.amendment, '', '■ 신구조문대비표', '현행\t개정안',
     ...(d.table || []).map((t) => `${t.current}\t${t.proposed}`), '', '■ 장단점', d.tradeoff, '', '※ AI가 만든 참고용 초안입니다. 문안과 개정 여부는 담당자가 확인해 결정합니다.',
   ];
@@ -197,7 +209,7 @@ function draftText(r, d) {
 function draftHtml(r, d) {
   const p = (t) => `<p>${esc(t).replace(/\n/g, '<br>')}</p>`;
   return `<h2>조례 개정 초안 ${esc(d.title)}</h2>
-    <p>검토 대상: ${esc(r.basis.item)}<br>대조 조례: ${esc(r.basis.ordinance)} (${esc(r.basis.ordinanceNote)})</p>
+    <p>검토 대상: ${esc(r.basis.item)}<br>대조 조례: ${esc(r.basis.ordinance)}${r.basis.ordinanceNote ? ` (${esc(r.basis.ordinanceNote)})` : ''}</p>
     <h3>개정이유</h3>${p(d.reason)}<h3>개정 위치</h3>${p(d.position)}<h3>개정 문안</h3>${p(d.amendment)}
     <h3>신구조문대비표</h3><table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;width:100%"><tr><th width="50%">현행</th><th width="50%">개정안</th></tr>
     ${(d.table || []).map((t) => `<tr><td>${esc(t.current).replace(/\n/g, '<br>')}</td><td>${esc(t.proposed).replace(/\n/g, '<br>')}</td></tr>`).join('')}</table>
@@ -279,7 +291,7 @@ async function renderS4() {
   const r = state.analysis[i.id];
   const drafts = r.result.drafts || [];
   view.innerHTML = `${head}
-    <div class="notice"><strong>이 초안의 기준</strong>${esc(r.basis.item)} → ${esc(r.basis.ordinance)} <span class="badge warn">${esc(r.basis.ordinanceNote)}</span></div>
+    <div class="notice"><strong>이 초안의 기준</strong>${esc(r.basis.item)} → ${esc(r.basis.ordinance)}${noteBadge(r)}</div>
     <p class="lede">조례 개정 초안 ${drafts.length}안입니다. 안마다 개정이유, 개정 위치, 개정 문안, 신구조문대비표를 담았습니다.</p>
     <p>${aiBadge(r)}</p>
     ${drafts.map((d, n) => `<div class="card draft">
@@ -305,7 +317,7 @@ function boardCard(i, b) {
   const inp = (name, type = 'text', ph = '') => `<input id="${name}-${esc(i.id)}" type="${type}" value="${esc(b[name])}" placeholder="${ph}" data-board="${esc(i.id)}" data-field="${name}">`;
   return `<div class="card board-card" data-card="${esc(i.id)}">
     <div class="item-head"><div><h3>${esc(i.lawName)} ${esc(i.article)}</h3><p class="muted">${esc(i.ordinance)} · 시행 ${esc(i.enforced)}</p></div>
-      <div class="badges"><span class="badge warn">검토 필요</span> <span class="badge warn">조례 미정비</span></div></div>
+      <div class="badges">${badgesHtml(i)}</div></div>
     <div class="grid-form">
       ${f('status', '진행 상태', `<select id="status-${esc(i.id)}" data-board="${esc(i.id)}" data-field="status">${STATUSES.map((s) => `<option${s === b.status ? ' selected' : ''}>${s}</option>`).join('')}</select>`)}
       ${f('owner', '담당자', inp('owner', 'text', '이름 또는 부서'))}
@@ -372,6 +384,19 @@ function needItem() {
   view.innerHTML = `<h2>항목을 먼저 고르세요</h2><div class="notice"><strong>선택한 항목이 없습니다.</strong>검토 필요 목록에서 항목을 고르면 이 단계를 볼 수 있습니다.</div>${linkBtn('#s1', '검토 필요 목록으로 이동')}`;
 }
 
+/* ---------- 시연 기준일(장면) 고르기 ---------- */
+async function loadScene(id) {
+  state.data = await api(`/api/cases?scene=${encodeURIComponent(id)}`);
+  state.scene = state.data.baseDate;
+  // 단계 탭을 바로 눌러도 열리도록 기본 선택 (장면 1은 시행규칙 제16조의3)
+  state.selected = state.data.items.find((x) => x.id === 'rule-16-3')?.id || state.data.items[0].id;
+}
+function renderSceneSelect() {
+  const d = state.data;
+  baseDateEl.innerHTML = `<label for="scene-pick">시연 기준일</label>
+    <select id="scene-pick">${d.scenes.map((x) => `<option value="${esc(x.id)}"${x.id === d.baseDate ? ' selected' : ''}>${esc(x.label)} (${esc(x.name)})</option>`).join('')}</select>`;
+}
+
 /* ---------- 라우터·이벤트 ---------- */
 const RENDER = { 1: renderS1, 2: renderS2, 3: renderS3, 4: renderS4, 5: renderS5 };
 async function route() {
@@ -429,6 +454,13 @@ document.addEventListener('click', async (e) => {
 document.addEventListener('change', async (e) => {
   const t = e.target;
   if (t.matches('[data-act-change="pick"]')) { state.selected = t.value; route(); return; }
+  if (t.id === 'scene-pick') {
+    view.innerHTML = skeleton(5);
+    try { await loadScene(t.value); renderSceneSelect(); route(); } catch (err) {
+      view.innerHTML = `<div class="notice danger"><strong>장면을 불러오지 못했습니다.</strong>${esc(err.message)}</div>`;
+    }
+    return;
+  }
   if (t.id === 'f-status') { state.filter.status = t.value; document.getElementById('board-list').innerHTML = boardListHtml(); return; }
   if (t.id === 'f-sort') { state.filter.sort = t.value; document.getElementById('board-list').innerHTML = boardListHtml(); return; }
   if (t.id === 'import-file') {
@@ -461,9 +493,8 @@ window.addEventListener('hashchange', route);
 (async function init() {
   view.innerHTML = skeleton(5);
   try {
-    state.data = await api('/api/cases');
-    state.selected = state.data.items.find((x) => x.id === 'rule-16-3')?.id || state.data.items[0].id; // 단계 탭을 바로 눌러도 열리도록 기본 선택
-    baseDateEl.textContent = `시연 기준일 ${state.data.baseDateLabel}`;
+    await loadScene(state.scene);
+    renderSceneSelect();
     route();
   } catch (e) {
     view.innerHTML = `<div class="notice danger"><strong>목록을 불러오지 못했습니다.</strong>${esc(e.message)} 서버가 실행 중인지 확인하세요.</div>`;

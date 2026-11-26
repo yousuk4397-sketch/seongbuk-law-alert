@@ -49,8 +49,8 @@ export const ORDINANCE = {
   shortNote: '기준일보다 뒤 판 (대체 자료)',
 };
 
-export function chunkRef(spec, maxChars) {
-  return spec ? publicChunk(findChunk(spec), maxChars) : null;
+export function chunkRef(spec, maxChars, baseDate) {
+  return spec ? publicChunk(findChunk(spec), maxChars, baseDate) : null;
 }
 
 export function listItems() {
