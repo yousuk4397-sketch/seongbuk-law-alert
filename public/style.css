@@ -12,7 +12,7 @@
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: auto; }
-body { margin: 0; font-family: var(--font); font-size: 17px; line-height: 1.55; color: var(--fg-1); background: #fff; }
+body { margin: 0; font-family: var(--font); font-size: 17px; line-height: 1.55; color: var(--fg-1); background: #FF0000; }
 .container { max-width: 1248px; margin: 0 auto; padding: 0 24px; }
 @media (min-width: 1376px) { .container { padding: 0 64px; } }
 @media (max-width: 640px) { .container { padding: 0 16px; } }
