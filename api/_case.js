@@ -120,9 +120,9 @@ export function demoAnalysis(itemId) {
       },
     ],
     drafts: [
-      { title: '1안. 핵심 예외만 정하는 간결형', reason: why, position: pos, amendment: a1, table: row('제8조의2 신설 (위 개정 문안)'), tradeoff: '장점: 조문이 짧고 읽기 쉽습니다. 단점: 3명 1조 작업의 예외가 따로 없어 현장 상황을 다 담지 못합니다.' },
-      { title: '2안. 사유를 항목별로 열거하는 상세형', reason: why, position: pos, amendment: a2, table: row('제8조의2 신설 (위 개정 문안)'), tradeoff: '장점: 적용 기준이 분명합니다. 단점: 열거하지 않은 상황이 생기면 다시 고쳐야 합니다.' },
-      { title: '3안. 구청장 인정에 맡기는 위임형', reason: why, position: pos, amendment: a3, table: row('제8조의2 신설 (위 개정 문안)'), tradeoff: '장점: 유연하게 운영할 수 있습니다. 단점: 예외 범위가 넓어 위임 취지에 맞는지 더 세밀한 검토가 필요합니다.' },
+      { title: '1안. 핵심 예외만 정하는 간결형', reason: why, position: pos, amendment: a1, table: row(a1), tradeoff: '장점: 조문이 짧고 읽기 쉽습니다. 단점: 3명 1조 작업의 예외가 따로 없어 현장 상황을 다 담지 못합니다.' },
+      { title: '2안. 사유를 항목별로 열거하는 상세형', reason: why, position: pos, amendment: a2, table: row(a2), tradeoff: '장점: 적용 기준이 분명합니다. 단점: 열거하지 않은 상황이 생기면 다시 고쳐야 합니다.' },
+      { title: '3안. 구청장 인정에 맡기는 위임형', reason: why, position: pos, amendment: a3, table: row(a3), tradeoff: '장점: 유연하게 운영할 수 있습니다. 단점: 예외 범위가 넓어 위임 취지에 맞는지 더 세밀한 검토가 필요합니다.' },
     ],
     cautions: [
       '시연 값(예시)입니다. 실제 개정 여부와 문안은 담당자가 법령과 조례 원문으로 확인해 결정합니다.',
