@@ -118,26 +118,30 @@ export function parseJson(text) {
   return JSON.parse(t.slice(start, end + 1));
 }
 
-// 반환: { ok, provider, model, data, attempts:[{provider, ok, reason}] }
-export async function askAI(system, user, validate) {
+// 반환: { ok, provider, model, data, attempts:[{provider, ok, reason, ms}] }
+// opts.slots: AI마다 쓸 시간(ms). 주면 앞 AI가 늦어도 정해진 시간 뒤 다음 AI로 넘어가 셋 다 기회를 얻는다(장면 2).
+//             주지 않으면 지금까지처럼 한 곳 45초, 세 곳 합쳐 50초 안에서 쓴다(장면 1).
+export async function askAI(system, user, validate, opts = {}) {
   const attempts = [];
   const deadline = Date.now() + TOTAL_BUDGET_MS;
+  const slots = opts.slots || null;
   for (const p of PROVIDERS) {
     const key = process.env[p.keyName];
     if (!key) { attempts.push({ provider: p.name, ok: false, reason: '키 비어 있음' }); continue; }
-    const left = deadline - Date.now();
-    if (left < MIN_TRY_MS) { attempts.push({ provider: p.name, ok: false, reason: '시간이 모자라 건너뜀' }); continue; }
+    const left = slots ? slots[p.name] : deadline - Date.now();
+    if (!slots && left < MIN_TRY_MS) { attempts.push({ provider: p.name, ok: false, reason: '시간이 모자라 건너뜀' }); continue; }
+    const t0 = Date.now();
     try {
-      const text = await p.call(key, p.model, system, user, Math.min(TIMEOUT_MS, left));
+      const text = await p.call(key, p.model, system, user, slots ? left : Math.min(TIMEOUT_MS, left));
       const data = parseJson(text);
       const bad = validate ? validate(data) : '';
       if (bad) throw new Error(bad);
-      attempts.push({ provider: p.name, ok: true });
+      attempts.push({ provider: p.name, ok: true, ms: Date.now() - t0 });
       return { ok: true, provider: p.name, model: p.model, data, attempts };
     } catch (e) {
       const msg = scrub(e?.message || String(e));
       const reason = e?.name === 'TimeoutError' || e?.name === 'AbortError' ? '시간 초과' : `오류: ${msg.slice(0, 120)}`;
-      attempts.push({ provider: p.name, ok: false, reason });
+      attempts.push({ provider: p.name, ok: false, reason, ms: Date.now() - t0 });
     }
   }
   return { ok: false, attempts };

@@ -140,9 +140,9 @@ async function renderS2() {
 }
 
 /* ---------- AI 분석 (3·4단계가 함께 사용) ---------- */
-async function analyze(id) {
-  if (state.analysis[id]) return state.analysis[id];
-  const r = await api('/api/analyze', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ item: id, scene: state.scene }) });
+async function analyze(id, refresh = false) {
+  if (state.analysis[id] && !refresh) return state.analysis[id];
+  const r = await api('/api/analyze', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ item: id, scene: state.scene, refresh }) });
   state.analysis[id] = r;
   return r;
 }
@@ -151,6 +151,11 @@ const aiBadge = (r) => r.source === 'live'
   : '<span class="badge demo">시연 값</span>';
 const attemptsList = (r) => (r.attempts || []).filter((a) => !a.ok).length
   ? `<p class="kv"><b>넘어간 AI:</b> ${r.attempts.filter((a) => !a.ok).map((a) => `${esc(a.provider)}(${esc(a.reason)})`).join(', ')}</p>` : '';
+// 저장된 답: 생성 시각과 「다시 분석」 버튼 (장면 2)
+const fmtAt = (iso) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('ko-KR', { hour12: false }); };
+const savedLine = (r) => (r.saved
+  ? `<div class="saved-line"><span class="badge ${r.saved.fromSaved ? 'info' : 'ok'}">${r.saved.fromSaved ? '저장된 답' : '새로 받은 답 · 저장함'}</span> <span class="muted">생성 시각 ${esc(fmtAt(r.saved.at))} · 저장 위치 ${esc(r.saved.storage)}</span> <button class="btn small" data-act="reanalyze">다시 분석</button></div>`
+  : '');
 const baseWarn = () => (state.data.ordinance.note ? `<div class="notice warn"><strong>기준일 확인 필요</strong>${esc(state.data.ordinance.note)}</div>` : '');
 const noteBadge = (r) => (r.basis.ordinanceNote ? ` <span class="badge warn">${esc(r.basis.ordinanceNote)}</span>` : '');
 const statusClass = (s) => (s === '없음' ? 'warn' : s === '일부 있음' ? 'info' : s === '있음' ? 'ok' : 'demo');
@@ -162,7 +167,7 @@ async function renderS3() {
   if (!state.analysis[i.id]) {
     view.innerHTML = `${head}${baseWarn()}<p class="lede">${esc(state.data.s3Lede)}</p>${pendingNotice()}
       <button class="btn primary" data-act="analyze">AI로 조문 대조하기</button>
-      <p class="muted" style="margin-top:12px">검색된 조문으로만 답하며, 개정이 필요한지는 단정하지 않습니다. 20~40초 걸릴 수 있습니다.</p>
+      <p class="muted" style="margin-top:12px">검색된 조문으로만 답하며, 개정이 필요한지는 단정하지 않습니다. ${esc(state.data.waitText)}</p>
       ${liveBox('ordin')}`;
     return;
   }
@@ -190,7 +195,7 @@ async function renderS3() {
         <p>${esc(a.summary)}</p>
         ${(a.cautions || []).length ? `<ul class="plain">${a.cautions.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}</details>
       <details class="more"><summary>AI가 참고한 조문 (${(r.sources || []).length}건)</summary>${srcLinks(r.sources, '참고한 조문')}</details>
-      <p class="kv">${aiBadge(r)}</p>${attemptsList(r)}
+      <p class="kv">${aiBadge(r)}</p>${attemptsList(r)}${savedLine(r)}
       ${liveBox('ordin')}`;
   } catch (e) { view.innerHTML = `${head}<div class="notice danger"><strong>분석하지 못했습니다.</strong>${esc(e.message)}</div><button class="btn" data-act="analyze">다시 시도</button>`; }
 }
@@ -440,13 +445,16 @@ document.addEventListener('click', async (e) => {
       const d = ds[Number(b.dataset.n)]; download(`조례개정초안_${d.title.split('.')[0]}.doc`, draftHtml(r, d));
     } else download('조례개정초안_전체.doc', ds.map((d) => draftHtml(r, d)).join('<br clear="all" style="page-break-before:always">'));
   }
-  if (act === 'analyze') {
+  if (act === 'analyze' || act === 'reanalyze') {
     const i = item();
-    view.querySelector('button[data-act="analyze"]').disabled = true;
-    view.insertAdjacentHTML('beforeend', `<div id="wait" class="notice" style="margin-top:16px"><strong>AI가 조문을 대조하는 중입니다 (<span id="sec">0</span>초)</strong>보통 20~40초 걸립니다. 앞 AI가 응답하지 못하면 다음 AI로 넘어가 더 걸릴 수 있습니다.${skeleton(4)}</div>`);
+    const refresh = act === 'reanalyze';
+    view.querySelectorAll('button[data-act="analyze"], button[data-act="reanalyze"]').forEach((x) => { x.disabled = true; });
+    // 「다시 분석」이면 버튼 바로 아래에, 처음이면 화면 맨 아래에 기다림 안내를 둔다
+    const host = refresh ? b.closest('.saved-line') : view;
+    host.insertAdjacentHTML(refresh ? 'afterend' : 'beforeend', `<div id="wait" class="notice" style="margin-top:16px"><strong>AI가 조문을 대조하는 중입니다 (<span id="sec">0</span>초)</strong>${esc(state.data.waitText)}${skeleton(4)}</div>`);
     const t0 = Date.now();
     const timer = setInterval(() => { const s = document.getElementById('sec'); if (s) s.textContent = Math.round((Date.now() - t0) / 1000); }, 1000);
-    try { await analyze(i.id); clearInterval(timer); } catch (err) { clearInterval(timer); document.getElementById('wait')?.remove(); view.insertAdjacentHTML('beforeend', `<div class="notice danger"><strong>분석하지 못했습니다.</strong>${esc(err.message)}</div>`); return; }
+    try { await analyze(i.id, refresh); clearInterval(timer); } catch (err) { clearInterval(timer); document.getElementById('wait')?.remove(); view.insertAdjacentHTML('beforeend', `<div class="notice danger"><strong>분석하지 못했습니다.</strong>${esc(err.message)}</div>`); return; }
     renderS3();
   }
 });
