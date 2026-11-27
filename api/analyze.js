@@ -32,10 +32,11 @@ const SYSTEM = `당신은 성북구 조례 담당 공무원을 돕는 법령 검
 function context(item, scene) {
   const picked = [];
   const add = (c) => { if (c && !picked.some((p) => p.id === c.id)) picked.push(c); };
-  // 장면 2처럼 근거 조각 목록을 따로 정해 둔 장면은 그 목록을 쓴다
+  // 장면 2처럼 근거 조각 목록을 항목마다 정해 둔 장면은 그 항목의 목록만 쓴다
   if (scene.context) {
-    for (const spec of scene.context.specs) add(findChunk(spec));
-    for (const id of scene.context.idPrefixes) add(findChunkById(id));
+    const ctx = scene.context[item.id];
+    for (const spec of ctx.specs) add(findChunk(spec));
+    for (const id of ctx.idPrefixes) add(findChunkById(id));
     return picked;
   }
   // 법률과 시행규칙(위임 조문)은 어느 항목을 골라도 함께 본다
