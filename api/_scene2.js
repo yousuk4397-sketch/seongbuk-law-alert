@@ -82,23 +82,23 @@ export const ORDINANCE = {
   shortNote: '',
 };
 
-// AI에게 근거로 넘길 조각: 법률·시행령·시행규칙(현행)·조례(현행)·검토 포인트(해설)
+// AI에게 근거로 넘길 조각: 고른 검토 항목과 직접 관련된 조각만 넘긴다(근거가 많으면 AI가 시간 안에 답하지 못한다)
+const L14_5 = { number: LAW, article: '제14조의5' };
+const L14_8 = { number: LAW, article: '제14조의8' };
+const D8_5 = { number: DECREE, article: '제8조의5' };
+const D8_6 = { number: DECREE, article: '제8조의6' };
+const R16_3 = { number: RULE_NOW, article: '제16조의3' };
+const O8 = { number: ORD_NOW, article: '제8조' };
+const O8_2 = { number: ORD_NOW, article: '제8조의2' };
+const O10_3 = { number: ORD_NOW, article: '제10조의3' };
+const SUMMARY = '폐기물관리법 개정(2026.11.12. 시행)과 성북구 조례 검토 포인트_02_요약';
+// 비용 지원(검토 포인트 ①)은 법 제14조의5 제3항 ↔ 시행령 제8조의5 ↔ 조례 제8조·제10조의3,
+// 강화된 안전기준(검토 포인트 ②)은 법 제14조의8 ↔ 시행령 제8조의6 ↔ 시행규칙 제16조의3 ↔ 조례 제8조의2 로 이어진다
 export const CONTEXT = {
-  specs: [
-    { number: LAW, article: '제14조의5' },
-    { number: LAW, article: '제14조의8' },
-    { number: DECREE, article: '제8조의5' },
-    { number: DECREE, article: '제8조의6' },
-    { number: RULE_NOW, article: '제16조의3' },
-    { number: ORD_NOW, article: '제8조' },
-    { number: ORD_NOW, article: '제8조의2' },
-    { number: ORD_NOW, article: '제10조의3' },
-  ],
-  idPrefixes: [
-    '폐기물관리법(법률)(제21129호)(20261112)_04_개정이유',
-    '폐기물관리법 개정(2026.11.12. 시행)과 성북구 조례 검토 포인트_02_요약',
-    '폐기물관리법 개정(2026.11.12. 시행)과 성북구 조례 검토 포인트_06_아직확인되지않은것',
-  ],
+  'law-14-5-2026': { specs: [L14_5, D8_5, O8, O10_3], idPrefixes: [SUMMARY] },
+  'law-14-8': { specs: [L14_8, D8_6, R16_3, O8_2], idPrefixes: [SUMMARY] },
+  'decree-8-5': { specs: [D8_5, L14_5, O8, O10_3], idPrefixes: [SUMMARY] },
+  'decree-8-6': { specs: [D8_6, L14_8, R16_3, O8_2], idPrefixes: [SUMMARY] },
 };
 
 // 법제처 조회가 안 될 때 보여 주는 값 (자료 05~07에 있는 값만)
