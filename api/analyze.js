@@ -3,6 +3,7 @@ import { send, readBody, getQuery } from './_util.js';
 import { askAI } from './_ai.js';
 import { ORDINANCE } from './_case.js';
 import { getScene } from './_scenes.js';
+import { loadAnswer, saveAnswer, storageKind } from './_store.js';
 import { findChunk, findChunkById, searchChunks, publicChunk, articleList } from './_docs.js';
 
 const LAW = { number: '법률 제16318호', article: '제14조의5' };
@@ -52,11 +53,18 @@ const cut = ({ source, link, docType, afterBase }) => ({ source, link, docType, 
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'POST 요청만 받습니다.' });
-  const { item: itemId, scene: sceneId } = await readBody(req);
+  const { item: itemId, scene: sceneId, refresh } = await readBody(req);
   const scene = getScene(sceneId || getQuery(req).scene);
   const ord = scene.ordinance;
   const item = scene.items.find((x) => x.id === itemId);
   if (!item) return send(res, 404, { error: '알 수 없는 항목입니다.' });
+
+  // 저장된 답이 있으면 AI를 부르지 않고 바로 보여 준다(「다시 분석」이면 새로 묻는다)
+  const saveKey = `${scene.id}/${item.id}`;
+  if (scene.saveAnswers && !refresh) {
+    const kept = await loadAnswer(saveKey);
+    if (kept) return send(res, 200, { ...kept.response, saved: { at: kept.savedAt, storage: kept.storage, fromSaved: true } });
+  }
 
   const chunks = context(item, scene);
   const allowed = new Map(chunks.map((c) => [c.id, publicChunk(c, 0, scene.id)]));
@@ -76,7 +84,7 @@ export default async function handler(req, res) {
     if (d.drafts.some((x) => !x.amendment || !Array.isArray(x.table) || !x.table.length || !x.position)) return '초안 형식 부족';
     return '';
   };
-  const r = await askAI(SYSTEM, user, check);
+  const r = await askAI(SYSTEM, user, check, { slots: scene.aiSlots });
   const mapSources = (ids) => (Array.isArray(ids) ? ids : []).map((id) => allowed.get(id)).filter(Boolean).map(cut);
   const allSources = chunks.map((c) => cut(publicChunk(c, 0, scene.id)));
 
@@ -112,5 +120,12 @@ export default async function handler(req, res) {
     // 자료에서 아직 확인되지 않은 것은 AI 답과 별도로 「확인할 점」 맨 앞에 붙인다
     cautions: [...scene.pending, ...(d.cautions || [])],
   };
-  send(res, 200, { source: 'live', provider: r.provider, model: r.model, attempts: r.attempts, basis, result, sources: allSources });
+  const response = { source: 'live', provider: r.provider, model: r.model, attempts: r.attempts, basis, result, sources: allSources };
+  if (scene.saveAnswers) {
+    // AI가 실제로 답한 것만 저장한다(시연 값은 저장하지 않는다)
+    const savedAt = new Date().toISOString();
+    const storage = await saveAnswer(saveKey, { savedAt, storage: storageKind(), response });
+    response.saved = { at: savedAt, storage, fromSaved: false };
+  }
+  send(res, 200, response);
 }

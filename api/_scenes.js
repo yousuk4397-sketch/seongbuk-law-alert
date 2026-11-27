@@ -16,6 +16,7 @@ export const SCENES = [
     ordinance: { ...s1.ORDINANCE, state: '정비 전 모습' },
     demoLive: s1.DEMO_LIVE,
     demoAnalysis: s1.demoAnalysis,
+    waitText: '보통 35~50초 걸립니다. 앞 AI가 응답하지 못하면 다음 AI로 넘어갑니다.',
   },
   {
     id: '2026-11-12',
@@ -31,6 +32,10 @@ export const SCENES = [
     demoLive: s2.DEMO_LIVE,
     demoAnalysis: s2.demoAnalysis,
     context: s2.CONTEXT,
+    // AI마다 쓸 시간: 앞 AI가 늦어도 정해진 시간 뒤 다음 AI로 넘어간다(합계 85초, vercel.json maxDuration 90초)
+    aiSlots: { Claude: 40000, Groq: 25000, Gemini: 20000 },
+    saveAnswers: true, // 같은 항목의 AI 답을 저장해 두고 다시 누르면 바로 보여 준다
+    waitText: '보통 40~50초 걸립니다. 앞 AI가 늦으면 다음 AI로 넘어가 최대 약 90초 걸릴 수 있습니다. 한 번 받은 답은 저장되어 다음부터 바로 나옵니다.',
   },
 ];
 
@@ -44,6 +49,8 @@ export function publicScene(s) {
     name: s.name,
     intro: s.intro,
     s3Lede: s.s3Lede,
+    waitText: s.waitText,
+    saveAnswers: !!s.saveAnswers,
     pending: s.pending,
     scenes: SCENES.map((x) => ({ id: x.id, label: x.label, name: x.name })),
     ordinance: {

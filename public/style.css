@@ -138,3 +138,5 @@ table.mini td { border: 0; padding: 2px 0; }
 .toast.ok { border-left: 4px solid var(--success); }
 .toast.danger { border-left: 4px solid var(--danger); }
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+/* 저장된 답 줄: 배지·생성 시각·다시 분석 버튼을 한 줄에, 좁으면 줄바꿈 */
+.saved-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 16px; font-size: 15px; }
