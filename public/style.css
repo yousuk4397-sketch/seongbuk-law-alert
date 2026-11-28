@@ -140,3 +140,24 @@ table.mini td { border: 0; padding: 2px 0; }
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
 /* 저장된 답 줄: 배지·생성 시각·다시 분석 버튼을 한 줄에, 좁으면 줄바꿈 */
 .saved-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 16px; font-size: 15px; }
+/* 맨 위 오른쪽: 시연 기준일 + 사용 방법 링크 */
+.masthead-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.help-link { font-size: 15px; font-weight: 700; color: var(--primary-60); text-decoration: underline; text-underline-offset: 3px; padding: 8px 4px; min-height: 44px; display: inline-flex; align-items: center; }
+.help-link:hover, .help-link[aria-current="page"] { color: var(--primary-70); }
+.help-link[aria-current="page"] { text-decoration-thickness: 2px; }
+
+/* 사용 방법: 5단계 카드 (넓으면 여러 칸, 좁으면 한 줄씩) */
+.help-steps { list-style: none; margin: 0 0 16px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.help-step { margin: 0; padding: 20px; display: flex; flex-direction: column; gap: 6px; }
+.help-step h3 { margin: 0; font-size: 17px; }
+.help-step p { margin: 0 0 8px; font-size: 15px; color: var(--fg-2); flex: 1; }
+.help-step .btn { align-self: flex-start; }
+.help-num { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--primary-50); color: #fff; font-weight: 700; font-size: 15px; }
+.help-notes { margin: 4px 0 0; padding-left: 18px; list-style: disc; }
+
+/* 처음 온 사람 안내 한 줄 */
+.first-visit { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--primary-10); border-radius: var(--r-m); padding: 8px 8px 8px 16px; margin: 16px 0 0; font-size: 15px; }
+.first-visit a { color: var(--primary-60); font-weight: 700; }
+.first-visit-close { font: inherit; font-size: 20px; line-height: 1; width: 40px; height: 40px; border: 0; background: transparent; color: var(--fg-2); border-radius: var(--r-s); cursor: pointer; }
+.first-visit-close:hover { background: #fff; }
+

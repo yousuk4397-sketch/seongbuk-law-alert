@@ -81,6 +81,45 @@ async function runLive(box, kind) {
   }
 }
 
+/* ---------- 사용 방법 (두 장면 공통) ---------- */
+const HELP_SEEN = 'seongbuk-help-seen'; // 처음 온 사람 안내를 닫았거나 사용 방법을 본 적이 있는가 (이 브라우저에만 저장)
+const helpSeen = () => { try { return localStorage.getItem(HELP_SEEN) === '1'; } catch { return false; } };
+const markHelpSeen = () => { try { localStorage.setItem(HELP_SEEN, '1'); } catch { /* 저장이 막혀 있으면 이번에만 숨긴다 */ } };
+const HELP_STEPS = [
+  { n: 1, title: '검토 필요 목록', desc: '바뀐 법령과 연결된 우리 구 조례를 확인합니다.' },
+  { n: 2, title: '신구법 비교', desc: '법령이 어떻게 바뀌었는지 봅니다.' },
+  { n: 3, title: '조문 대조와 사유', desc: 'AI가 조례에서 검토할 조문과 이유를 찾습니다. (약 40초)' },
+  { n: 4, title: '개정 초안', desc: '조례 개정 초안을 보고 신구조문대비표로 복사하거나 Word로 내려받습니다.' },
+  { n: 5, title: '현황판', desc: '진행 상태, 담당자, 기한을 기록합니다.' },
+];
+function renderHelp() {
+  markHelpSeen();
+  view.innerHTML = `
+    <h2>사용 방법</h2>
+    <p class="lede">법령이 바뀌면, 고쳐야 할 성북구 조례 조문과 개정 초안을 알려 줍니다.</p>
+    <ol class="help-steps">${HELP_STEPS.map((x) => `
+      <li class="card help-step">
+        <span class="help-num" aria-hidden="true">${x.n}</span>
+        <h3>${esc(x.title)}</h3>
+        <p>${esc(x.desc)}</p>
+        ${linkBtn(`#s${x.n}`, '이 화면으로 가기', 'small')}
+      </li>`).join('')}
+    </ol>
+    <div class="notice"><strong>시연 기준일 (맨 위 오른쪽에서 고릅니다)</strong>
+      2019. 12. 31. 과거 사례: 조례 반영까지 645일 걸린 사례<br>
+      2026. 11. 12. 최근 사례: 오늘 시행된 개정</div>
+    <div class="notice warn"><strong>꼭 알아 둘 점</strong>
+      <ul class="plain help-notes">
+        <li>AI 판단은 참고용이며 최종 판단은 담당자가 합니다.</li>
+        <li>법령 원문으로 꼭 확인합니다.</li>
+        <li>현황판 내용은 이 브라우저에만 저장됩니다.</li>
+      </ul></div>
+    <div class="actions">${linkBtn('#s1', '검토 필요 목록부터 시작하기')}</div>`;
+}
+const firstVisitBar = () => (helpSeen() ? '' : `<div class="first-visit" id="first-visit">
+    <span>처음이신가요? <a href="#help">사용 방법 보기</a></span>
+    <button class="first-visit-close" data-act="close-first" aria-label="안내 닫기">×</button></div>`);
+
 /* ---------- 1단계: 검토 필요 목록 ---------- */
 function renderS1() {
   const d = state.data;
@@ -96,6 +135,7 @@ function renderS1() {
       <div class="actions"><button class="btn primary" data-act="open" data-id="${esc(i.id)}">신구법 비교 보기</button></div>
     </div>`).join('');
   view.innerHTML = `
+    ${firstVisitBar()}
     <h2>검토 필요 목록</h2>
     <p class="lede">법령 변경이력에서 개정된 법령과, 그와 연결된 성북구 조례를 모았습니다. 항목을 고르면 바뀌기 전과 후의 법령을 비교합니다.</p>
     <div class="notice"><strong>시연 기준일: ${esc(d.baseDateLabel)} (${esc(d.name)})</strong>${esc(d.intro)}</div>
@@ -111,6 +151,7 @@ async function renderS2() {
   view.innerHTML = `<h2>신구법 비교</h2>${contextBar()}${skeleton(6)}`;
   try {
     const c = state.compare[i.id] || (state.compare[i.id] = await api(`/api/compare?item=${encodeURIComponent(i.id)}&scene=${encodeURIComponent(state.scene)}`));
+    if (!location.hash.startsWith('#s2')) return; // 기다리는 사이 다른 화면으로 옮겼으면 그리지 않는다
     const segs = (x) => x.segments.map((s) => s.t === 'same' ? esc(s.s) : `<mark class="${s.t}">${esc(s.s)}</mark>`).join('');
     const box = (t, x, badge) => `<div class="card"><h3>${t} ${badge || ''}</h3><div class="law-text">${segs(x)}</div>${srcLinks([x], '출처')}</div>`;
     const legend = '<p class="muted"><mark class="add">초록 밑줄</mark>은 새로 생긴 내용, <mark class="del">빨간 취소선</mark>은 없어진 내용입니다.</p>';
@@ -174,6 +215,7 @@ async function renderS3() {
   view.innerHTML = `${head}${skeleton(5)}`;
   try {
     const r = await analyze(i.id);
+    if (!location.hash.startsWith('#s3')) return; // 기다리는 사이 다른 화면으로 옮겼으면 그리지 않는다
     const a = r.result, c = a.conclusion;
     const delegation = c.delegation ? `<blockquote class="quote"><strong>위임 문구 (${esc(c.delegationArticle || '')})</strong><br>${esc(c.delegation)}</blockquote>` : '';
     const rows = (a.comparisons || []).map((x) => `<tr><td><strong>${esc(x.article)}</strong></td><td><span class="badge ${statusClass(x.status)}">${esc(x.status)}</span></td><td>${esc(x.reason)}${srcLinks(x.sources)}</td></tr>`).join('');
@@ -405,12 +447,15 @@ function renderSceneSelect() {
 /* ---------- 라우터·이벤트 ---------- */
 const RENDER = { 1: renderS1, 2: renderS2, 3: renderS3, 4: renderS4, 5: renderS5 };
 async function route() {
-  const n = Number((location.hash.match(/#s(\d)/) || [])[1]) || 1;
+  const help = location.hash === '#help';
+  const n = help ? 0 : Number((location.hash.match(/#s(\d)/) || [])[1]) || 1;
   document.querySelectorAll('#step-nav a').forEach((a) => {
     if (Number(a.dataset.step) === n) a.setAttribute('aria-current', 'step'); else a.removeAttribute('aria-current');
   });
+  const hl = document.getElementById('help-link');
+  if (help) hl.setAttribute('aria-current', 'page'); else hl.removeAttribute('aria-current');
   if (!state.data) return;
-  await RENDER[n]();
+  await (help ? renderHelp() : RENDER[n]());
   window.scrollTo(0, 0);
 }
 
@@ -420,6 +465,7 @@ document.addEventListener('click', async (e) => {
   const act = b.dataset.act;
   if (act === 'open') { state.selected = b.dataset.id; location.hash = '#s2'; }
   if (act === 'live') runLive(b.closest('[data-live]'), b.dataset.kind);
+  if (act === 'close-first') { markHelpSeen(); document.getElementById('first-visit')?.remove(); }
   if (act === 'csv') exportCsv();
   if (act === 'export') exportBoard();
   if (act === 'table-copy') {
