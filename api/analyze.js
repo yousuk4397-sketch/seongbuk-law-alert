@@ -79,7 +79,7 @@ export default async function handler(req, res) {
   const index = scene.articleIndex ? loadData(scene.articleIndex) : null;
   const usedNumbers = index ? index.조문.map((a) => a.번호) : [];
   const ordList = index
-    ? `${index.조문.map((a) => `${a.번호}(${a.제목})`).join(' / ')}\n(${index.번호}, 시행 ${index.시행일}, 조문 ${index.조문수}개. 「삭제」도 이미 쓰인 번호)`
+    ? `${index.조문.map((a) => (a.삭제 ? `${a.번호}(삭제)` : a.번호)).join(' / ')}\n(${index.번호}, 시행 ${index.시행일}, 조문 ${index.조문수}개. 「삭제」도 이미 쓰인 번호)` // 번호만 넘긴다(글자 수를 줄여 시간 안에 답하게)
     : articleList(ord.number).join(' / ');
   const rules = scene.writingRules ? `[조례 작성 규칙]\n${scene.writingRules.map((x) => `- ${x}`).join('\n')}\n\n` : '';
   const user = `[검토할 법령 변경]\n${basis.item}\n\n[연결 조례] ${ord.name} (${ord.label}, ${ord.state})\n\n[조례 조문 목록]\n${ordList}\n\n${rules}[검색된 조문]\n` +
