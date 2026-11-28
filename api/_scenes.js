@@ -32,6 +32,9 @@ export const SCENES = [
     demoLive: s2.DEMO_LIVE,
     demoAnalysis: s2.demoAnalysis,
     context: s2.CONTEXT,
+    articleIndex: s2.ARTICLE_INDEX, // AI에게 넘기는 현행 조례 전체 조문 번호 목록
+    writingRules: s2.WRITING_RULES, // 조례 작성 규칙(AI 답변 규칙 지시문과 별도)
+    checkDrafts: true, // AI 초안을 서버가 검사(번호 충돌·상위 법령 위임 문장·단정 표현)
     // AI마다 쓸 시간: 앞 AI가 늦어도 정해진 시간 뒤 다음 AI로 넘어간다(합계 85초, vercel.json maxDuration 90초)
     aiSlots: { Claude: 40000, Groq: 25000, Gemini: 20000 },
     saveAnswers: true, // 같은 항목의 AI 답을 저장해 두고 다시 누르면 바로 보여 준다

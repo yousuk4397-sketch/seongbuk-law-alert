@@ -92,6 +92,11 @@ export function findChunkById(prefix) {
   return loadChunks().find((c) => c.id.startsWith(prefix)) || null;
 }
 
+// 서비스 데이터(JSON) 읽기: 예) 현행 조례 전체 조문 목록
+export function loadData(file) {
+  return JSON.parse(fs.readFileSync(path.join(DATA_DIR, file), 'utf8'));
+}
+
 // 조례 조문 목록(AI가 없는 조문 번호를 지어내지 않도록 알려 준다)
 export function articleList(number) {
   return loadChunks()
