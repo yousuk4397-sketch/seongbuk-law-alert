@@ -34,7 +34,10 @@ export default async function handler(req, res) {
   if (it.before) {
     // 같은 조문이 있었던 경우: 바뀐 낱말 표시
     const before = ref(it.before);
-    const d = diffSegments(before.body, after.body);
+    const d = diffSegments(before.body, after.body, it.diffOptions);
+    // 비교 기준 안내와 자료 기준 「바뀐 곳 요약」(있으면 자동 요약 대신 쓴다)
+    out.baseNote = it.baseNote || '';
+    out.changeSummary = it.changeSummary || null;
     out.compare = { before: { ...before, segments: d.before }, after: { ...after, segments: d.after } };
   }
 
