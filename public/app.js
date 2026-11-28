@@ -178,9 +178,9 @@ async function renderS3() {
     const delegation = c.delegation ? `<blockquote class="quote"><strong>위임 문구 (${esc(c.delegationArticle || '')})</strong><br>${esc(c.delegation)}</blockquote>` : '';
     const rows = (a.comparisons || []).map((x) => `<tr><td><strong>${esc(x.article)}</strong></td><td><span class="badge ${statusClass(x.status)}">${esc(x.status)}</span></td><td>${esc(x.reason)}${srcLinks(x.sources)}</td></tr>`).join('');
     view.innerHTML = `${head}
-      ${r.reason ? `<div class="notice warn"><strong>AI 응답 실패</strong>${esc(r.reason)}</div>` : ''}
+      ${r.reason ? `<div class="notice warn"><strong>${r.checkFailed ? 'AI 초안 검사' : 'AI 응답 실패'}</strong>${esc(r.reason)}</div>` : ''}
       <div class="card selected verdict">
-        <p><span class="badge warn">${esc(c.verdict)}</span> <span class="muted">참고 의견입니다. 최종 판단은 담당자가 합니다.</span></p>
+        <p><span class="badge warn">${esc(c.verdictLabel || c.verdict)}</span> <span class="muted">참고 의견입니다. 최종 판단은 담당자가 합니다.</span></p>
         <p class="headline">${esc(c.headline)}</p>
         <p><strong>고칠 곳</strong> ${esc(c.target)}</p>
         ${delegation}
