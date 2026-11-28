@@ -17,6 +17,9 @@ export const ITEMS = [
     promulgated: '2019. 4. 16.',
     enforced: '2019. 10. 17.',
     summary: '생활폐기물을 수집ㆍ운반하는 자가 지켜야 할 안전기준을 새로 정하고, 구체적인 기준은 환경부령에 맡겼습니다.',
+    // 목록 카드 표시용(판정 배지·조례 검토 방향 한 줄)
+    verdictBadge: '검토 필요',
+    reviewLine: '조례 제8조 다음: 안전기준·예외 사유 조문 신설 검토 (조례 위임은 시행규칙 제16조의3)',
     before: null,
     after: { number: '법률 제16318호', article: '제14조의5' },
   },
@@ -30,6 +33,8 @@ export const ITEMS = [
     promulgated: '2019. 12. 31.',
     enforced: '2019. 12. 31.',
     summary: '주간작업과 3명 1조 작업을 원칙으로 정하고, 그 예외 사유는 조례로 정하도록 맡겼습니다. 조례 정비와 가장 직접 연결되는 조문입니다.',
+    verdictBadge: '검토 필요',
+    reviewLine: '조례 제8조 다음: 안전기준·예외 사유 조문 신설 검토',
     before: null, // 안전기준 조문은 이번 개정으로 새로 생겼다. 종전 제16조의3(음식물류 신고)은 제16조의5로 옮겨졌다.
     after: { number: '환경부령 제843호', article: '제16조의3' },
     moved: {

@@ -16,6 +16,8 @@ export const PENDING = [
 export const ITEMS = [
   {
     id: 'law-14-5-2026',
+    verdictBadge: '반영 검토 (재량)', // 목록 카드 표시용
+    reviewLine: '조례 제8조·제10조의3: 수집·운반 비용 지원 근거 반영 검토',
     kind: '법률',
     lawName: '폐기물관리법',
     article: '제14조의5',
@@ -31,6 +33,8 @@ export const ITEMS = [
   },
   {
     id: 'law-14-8',
+    verdictBadge: '검토 필요', // 목록 카드 표시용
+    reviewLine: '조례 제8조의2: 3명1조 예외를 공동주택 등에도 계속 적용할 수 있는지 (세부 기준은 확인 필요)',
     kind: '법률',
     lawName: '폐기물관리법',
     article: '제14조의8',
@@ -46,6 +50,8 @@ export const ITEMS = [
   },
   {
     id: 'decree-8-5',
+    verdictBadge: '반영 검토 (재량)', // 목록 카드 표시용
+    reviewLine: '조례 제8조·제10조의3: 수집·운반 비용 지원 근거 반영 검토',
     kind: '시행령',
     lawName: '폐기물관리법 시행령',
     article: '제8조의5',
@@ -61,6 +67,8 @@ export const ITEMS = [
   },
   {
     id: 'decree-8-6',
+    verdictBadge: '검토 필요', // 목록 카드 표시용
+    reviewLine: '조례 제8조의2: 3명1조 예외를 공동주택 등에도 계속 적용할 수 있는지',
     kind: '시행령',
     lawName: '폐기물관리법 시행령',
     article: '제8조의6',
