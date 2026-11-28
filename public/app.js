@@ -180,6 +180,8 @@ function changeHunks(before, after) {
 }
 const cut = (t, k = 60) => (t.length > k ? `${t.slice(0, k)}…` : t);
 function changeSummary(c) {
+  // 자료 기준 요약이 있으면 그것을 쓴다(이번 개정과 무관한 변경이 섞이지 않게)
+  if (c.changeSummary) return `<div class="card change-sum"><h3>바뀐 곳 요약 <span class="t3">${c.changeSummary.length}곳 · 이번 개정(${esc(c.compare.after.source.match(/법률 제\d+호/)?.[0] || '')}) 기준</span></h3><ul>${c.changeSummary.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`;
   const h = changeHunks(c.compare.before.body, c.compare.after.body);
   if (!h.length) return '';
   const line = (x) => (x.del && x.add ? `<li><del>${esc(cut(x.del))}</del> → <ins>${esc(cut(x.add))}</ins></li>`
@@ -207,9 +209,10 @@ async function renderS2() {
           <div class="cols">${box('바뀌기 전 (' + esc(c.moved.fromArticle) + ')', c.moved.before)}${box('바뀐 후 (' + esc(c.moved.toArticle) + ')', c.moved.after)}</div>`;
       }
     } else {
-      const n = changeHunks(c.compare.before.body, c.compare.after.body).length;
+      const n = c.changeSummary ? c.changeSummary.length : changeHunks(c.compare.before.body, c.compare.after.body).length;
       core = `${esc(i.lawName)} ${esc(i.article)}: ${esc(i.change)}, 바뀐 곳 ${n}곳`;
-      body = `${changeSummary(c)}${dates}${legend}<div class="cols">${box('바뀌기 전', c.compare.before)}${box('바뀐 후', c.compare.after)}</div>`;
+      const legend2 = c.baseNote ? '<p class="legend"><mark class="add">초록 밑줄</mark> 새로 생긴 내용 · <mark class="del">빨간 취소선</mark> 없어진 내용 · <mark class="other">회색</mark> 이번 개정과 무관한 변경(정부조직 개편·표기 차이)</p>' : legend;
+      body = `${changeSummary(c)}${dates}${legend2}${c.baseNote ? `<p class="base-note">${esc(c.baseNote)}</p>` : ''}<div class="cols">${box('바뀌기 전', c.compare.before)}${box('바뀐 후', c.compare.after)}</div>`;
     }
     view.innerHTML = `
       <h2>신구법 비교</h2>
@@ -273,7 +276,7 @@ async function renderS3() {
       </div>
       ${baseWarn()}
       <details open class="more"><summary>조례 조문별 대조 (${(a.comparisons || []).length}건)</summary>
-        <div class="table-wrap"><table><thead><tr><th>조례 조문</th><th>위임 사항</th><th>이유</th></tr></thead><tbody>${rows}</tbody></table></div></details>
+        <div class="table-wrap"><table><thead><tr><th>조례 조문</th><th>${esc(state.data.compareColumn || '위임 사항')}</th><th>이유</th></tr></thead><tbody>${rows}</tbody></table></div></details>
       <details class="more"><summary>법령이 바꾼 것과 확인할 점</summary>
         ${r.source === 'live' ? '<p class="t3">아래 내용은 AI가 정리한 것으로, 출처 조문이 연결되어 있지 않습니다. 근거 문서에 없는 내용이 섞일 수 있으니 원문으로 확인하세요.</p>' : ''}
         <p>${esc(a.summary)}</p>

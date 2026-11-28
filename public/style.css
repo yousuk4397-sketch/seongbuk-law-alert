@@ -220,3 +220,6 @@ dl.short dd { margin: 0; color: var(--fg-2); }
   .core, .t2, .lede, .review-line, details.note, .verdict .target, .draft .position, dl.short, .card > p { max-width: 70%; }
 }
 @media (max-width: 640px) { .core { font-size: 19px; } .t1, .verdict .target, .draft .position { font-size: 18px; } dl.short { grid-template-columns: 1fr; } }
+/* 이번 개정과 무관한 변경(정부조직 개편·표기 차이): 회색 */
+mark.other { background: var(--gray-20); color: var(--fg-2); text-decoration: underline dotted; text-decoration-color: var(--gray-60); }
+.base-note { font-size: 14px; font-weight: 700; color: var(--fg-2); margin: 0 0 8px; }
