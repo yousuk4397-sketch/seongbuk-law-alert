@@ -211,7 +211,7 @@ async function renderS2() {
     } else {
       const n = c.changeSummary ? c.changeSummary.length : changeHunks(c.compare.before.body, c.compare.after.body).length;
       core = `${esc(i.lawName)} ${esc(i.article)}: ${esc(i.change)}, 바뀐 곳 ${n}곳`;
-      const legend2 = c.baseNote ? '<p class="legend"><mark class="add">초록 밑줄</mark> 새로 생긴 내용 · <mark class="del">빨간 취소선</mark> 없어진 내용 · <mark class="other">회색</mark> 이번 개정과 무관한 변경(정부조직 개편)</p>' : legend;
+      const legend2 = c.baseNote ? '<p class="legend"><mark class="add">초록 밑줄</mark> 새로 생긴 내용 · <mark class="del">빨간 취소선</mark> 없어진 내용 · <mark class="other">회색</mark> 이번 개정과 무관한 변경(정부조직 개편·표기 차이)</p>' : legend;
       body = `${changeSummary(c)}${dates}${legend2}${c.baseNote ? `<p class="base-note">${esc(c.baseNote)}</p>` : ''}<div class="cols">${box('바뀌기 전', c.compare.before)}${box('바뀐 후', c.compare.after)}</div>`;
     }
     view.innerHTML = `
