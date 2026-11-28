@@ -75,6 +75,8 @@ export function publicScene(s) {
       summary: it.summary,
       status: '검토 필요',
       badges: it.pending ? [...s.badges, '확인 필요'] : s.badges,
+      verdictBadge: it.verdictBadge || '검토 필요',
+      reviewLine: it.reviewLine || '',
       pending: !!it.pending,
       ordinance: s.ordinance.name,
     })),
